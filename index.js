@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
-const footbalSchema = require('footballSchema');
 
 main().catch(err => console.log(err));
 
 async function main() {
-  await mongoose.connect('mongodb://localhost:27017');
+  mongoose.set('strictQuery',true)
+  await mongoose.connect('mongodb://0.0.0.0:27017/football').then(()=>console.log("Database connected")).catch((err)=> console.log(err));
 }
