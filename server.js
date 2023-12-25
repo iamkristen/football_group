@@ -6,7 +6,6 @@ const cors = require('cors');
 const appRoutes = require('./router/app_router') 
 
 
-
 server.use(parser.json());
 server.use(parser.urlencoded({extended:false}))
 server.use(cors({

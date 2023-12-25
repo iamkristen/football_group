@@ -24,15 +24,15 @@ router.post('/add', async (req, res) => {
       res.status(500).json({ success: false, error: "Internal server error." });
     }
   });
-  
+
 
 
 //===== 1.6 write Query in a separate POST method for updating a single record for a Given Team ======
-router.post('/update/:team', async (req, res) => {
+router.post('/update/:id', async (req, res) => {
     const data = req.body;
-    const team = req.params.team;
+    const id = req.params.id;
     try{
-        const updatedData = await Football.findOneAndUpdate({"Team":team},data);
+        const updatedData = await Football.findOneAndUpdate({"_id":id},data);
         if(!updatedData){
             res.json({success:false,error:"Query Failed."});
             return;
@@ -56,7 +56,7 @@ router.get('/getdata-by-year/:year', async (req, res) => {
             {
               $group: {
                 _id: null,
-                totalGamesPlayed: { $sum: '$GamesPlayed' },
+                totalGamesPlayed: { $sum: '$Games Played' },
                 totalDraw: { $sum: '$Draw' },
                 totalWin: { $sum: '$Win' }
               }
@@ -67,7 +67,7 @@ router.get('/getdata-by-year/:year', async (req, res) => {
             return res.json({ success:true,data:'No stats found for the year' });
           }
       
-          return res.json({statistics: getData });
+          return res.json({success:true, data: getData });
         } catch (error) {
           console.error('Error retrieving team statistics:', error);
           return res.json({ success:false,error:"Something Went Wrong." });
@@ -76,10 +76,10 @@ router.get('/getdata-by-year/:year', async (req, res) => {
 
 
 //===== 1.8 It should also have an separate endpoint using POST method for deleting record for a given Team ======
-router.post('/delete/:team', async (req, res) => {
-    const team = req.params.team;
+router.post('/delete/:id', async (req, res) => {
+    const id = req.params.id;
     try{
-        const data = await Football.findOneAndDelete({"Team":team});
+        const data = await Football.findOneAndDelete({"_id":id});
         if(!data){
             res.json({success:false,error:"Query Failed."});
             return;
@@ -112,38 +112,32 @@ router.get('/getdata', async (req, res) => {
 
 
 //===== 2.0 it should have an endpoint having a Query to display the all the Team (including all nine columns) where average “Goal For” for a given year entered by the user the data should be displayed on browser. ======
-router.get('/get-avg-goal/:year', async (req, res) => {
-    const year = req.params.year;
-    try{
-        const avgGoal = await Football.aggregate([
-            {
-              $match: { 
-                Year: parseInt(year) }
-            },
-            {
-              $group: {
-                _id: '$Team',
-                AvgGoal: { $avg: '$GoalsFor' },
-                
-              }
-            }
-          ]);
-      
-          if (avgGoal === 0) {
-            return res.json({ success:true,data:'No data found for the year' });
-          }
-      
-          const teamsData = await Football.find({
-            Team: { $in: avgGoal.map(item => item._id) }, // Filter by teams from averageGoals result
-            GoalsFor: { $gt: 0 }, // Ensures teams with non-zero 'goalsFor' are included
-            Year: parseInt(year) // Filter by the given year
-          });
-      
-          return res.json({success:true,data:teamsData });
-        } catch (error) {
-          console.error('Error retrieving team data:', error);
-          return res.json({ success:false,error:"Something Went Wrong." });
-        }
+router.get('/teams-average-goals/:year', async (req, res) => {
+  const year = parseInt(req.params.year);
+
+  try {
+    const result = await Football.aggregate([
+      { $match: { Year: parseInt(year) } },
+      {
+        $group: {
+          _id: null,
+          averageGoalsFor: { $avg: '$Goals For' },
+          teams: { $push: '$$ROOT' }, 
+        },
+      },
+    ]);
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: 'No data found for the given year' });
+    }
+
+    // Send the result as JSON response
+    res.json({ year, averageGoalsFor: result[0].averageGoalsFor, teams: result[0].teams });
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error' });
+  }
 });
+
+
 
 module.exports = router;
